@@ -256,5 +256,167 @@ Network namespace → isolates network stack
 cgroups → enforce resource limits
 
 Together → container
+---
+
+# Network Namespace — Core Definition
+
+> Network namespace isolates the entire network stack for a process.
+
+It provides an independent instance of:
+
+* Network interfaces
+* IP addresses
+* Routing table
+* ARP table
+* Netfilter (iptables)
+* Port space
+
+Same kernel.
+Different TCP/IP world.
+
+---
+
+# What Happens When You Create One?
+
+Command:
+
+```bash
+sudo unshare --net bash
+```
+
+Kernel does:
+
+* Creates a new network namespace
+* Initializes empty network stack
+* Only `lo` (loopback) interface exists
+* `lo` is DOWN by default
+* No routes configured
+
+Result:
+
+```text
+ip addr → only lo
+ip route → empty
+```
+
+No internet.
+No eth0.
+No docker0.
+
+---
+
+# Key Properties
+
+## 1️⃣ Port Space Is Namespaced
+
+Port binding is per namespace.
+
+So:
+
+Namespace A:
+
+* Process listening on :8080
+
+Namespace B:
+
+* Process listening on :8080
+
+No conflict.
+
+Conflict happens only inside same namespace.
+
+---
+
+## 2️⃣ Isolation Is Bidirectional for Networking
+
+Unlike PID:
+
+* Namespaces cannot see each other’s interfaces
+* Cannot share routes
+* Cannot access each other unless explicitly connected
+
+---
+
+## 3️⃣ Fresh Network Stack
+
+A new network namespace has:
+
+| Component     | State     |
+| ------------- | --------- |
+| Interfaces    | Only `lo` |
+| Routing table | Empty     |
+| Internet      | No        |
+| Gateway       | No        |
+
+Connectivity must be manually configured.
+
+---
+
+# How Containers Use It
+
+When Docker starts container:
+
+1. Creates veth pair
+2. One end inside container namespace
+3. Other end attached to bridge (`docker0`)
+4. Assigns IP
+5. Sets default route
+6. Configures NAT
+
+Then container gets internet.
+
+---
+
+# Kubernetes Model
+
+* Each Pod = one network namespace
+* All containers inside Pod share it
+* Different Pods → different namespaces
+* Same internal ports allowed across Pods
+
+---
+
+# Important Mental Model
+
+Network namespace = isolated TCP/IP stack
+
+It is not:
+
+* New kernel
+* New NIC hardware
+* New VM
+
+It is:
+
+* Separate logical networking instance within same kernel.
+
+---
+
+# Minimal Diagram
+
+Host Namespace:
+
+```
+eth0 → 172.x.x.x
+docker0 → 172.17.0.1
+routes present
+```
+
+New Network Namespace:
+
+```
+lo (DOWN)
+no routes
+no connectivity
+```
+
+---
+
+# Critical Invariants
+
+* Isolation is default
+* Connectivity must be explicitly created
+* Port conflicts are namespace-scoped
+* Host port mapping crosses namespace boundary
 
 ---
