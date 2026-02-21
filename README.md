@@ -142,3 +142,119 @@ PID namespace:
 * Only changes what a process can see
 
 It creates a “process illusion boundary.”
+
+---
+
+# Mount Namespace — Short Summary Notes
+
+## 1️⃣ Definition
+
+Mount namespace isolates:
+
+> The mount table (filesystem view), not the physical storage.
+
+Each mount namespace has its own independent list of mount points.
+
+---
+
+## 2️⃣ What Actually Changes
+
+When you ran:
+
+```bash
+sudo unshare --mount bash
+```
+
+Kernel created:
+
+* A new mount namespace
+* A separate mount table for that shell
+
+Nothing else changed.
+
+---
+
+## 3️⃣ What Is Isolated
+
+Inside mount namespace:
+
+* New mounts are visible only inside that namespace
+* Unmounts affect only that namespace
+* Bind mounts are private to that namespace
+
+---
+
+## 4️⃣ What Is NOT Isolated
+
+| Component     | Shared or Isolated? |
+| ------------- | ------------------- |
+| Disk blocks   | Shared              |
+| Files on disk | Shared              |
+| Kernel        | Shared              |
+| Mount table   | Isolated            |
+
+Important:
+
+If you modify a file inside a shared filesystem,
+it affects host too.
+
+Mount namespace does NOT duplicate files.
+It only isolates mount structure.
+
+---
+
+## 5️⃣ Your Practical Proof
+
+Inside namespace:
+
+```bash
+mount -t tmpfs tmpfs /mnt
+touch /mnt/testfile
+```
+
+Host did NOT see:
+
+* tmpfs mount
+* testfile
+
+Because mount table was isolated.
+
+---
+
+## 6️⃣ Key Concept
+
+Mount namespace isolates:
+
+> How filesystems are attached
+
+It does NOT isolate:
+
+> What data exists on disk
+
+---
+
+## 7️⃣ Why Containers Need This
+
+Docker uses mount namespace to:
+
+* Mount container root filesystem
+* Mount overlay layers
+* Hide host filesystem
+* Provide container-specific `/proc`, `/sys`
+
+Without mount namespace:
+
+Containers would see full host filesystem.
+
+---
+
+## 8️⃣ Important Distinction
+
+PID namespace → isolates processes
+Mount namespace → isolates filesystem view
+Network namespace → isolates network stack
+cgroups → enforce resource limits
+
+Together → container
+
+---
