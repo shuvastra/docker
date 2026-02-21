@@ -420,3 +420,6 @@ no connectivity
 * Host port mapping crosses namespace boundary
 
 ---
+
+
+When we run `docker run`, the Docker CLI communicates with the Docker daemon. The daemon prepares an OCI runtime specification and passes it to containerd, which invokes runc. runc then calls the Linux `clone()` system call with namespace flags like CLONE_NEWPID and CLONE_NEWNET. The Linux kernel creates new namespace objects in kernel memory and creates a new process attached to them. Inside a new PID namespace, the first process automatically becomes PID 1. These namespaces exist as long as at least one process references them. When the container’s init process exits, the namespaces are garbage collected by the kernel.
